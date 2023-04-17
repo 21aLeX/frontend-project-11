@@ -1,46 +1,64 @@
 import * as yup from 'yup';
-// import keyBy from 'lodash/keyBy.js';
-// import isEmpty from 'lodash/isEmpty.js';
+import i18n from 'i18next';
+import resources from './locales/index.js';
 import form from './form.js';
 import body from './body.js';
 import watchedState from './watcheds.js';
 
+const state = {
+  listRSS: [],
+  isValid: null,
+  lng: 'ru',
+};
+i18n.init({
+  lng: state.lng,
+  resources,
+});
+const schema = yup.object().shape({
+  url: yup.string().url(),
+});
+const renderValid = (path, value) => {
+  console.log(value);
+  const inputUrl = document.querySelector('[name=url]');
+  const forma = document.querySelector('form');
+  const p = forma.parentNode.lastChild;
+  p.textContent = i18n.t(value);
+  if (value === 'valid') {
+    inputUrl.classList.remove('is-invalid');
+    forma.reset();
+    inputUrl.focus();
+    p.classList.remove('text-danger');
+    p.classList.add('text-success');
+  } else {
+    p.classList.remove('text-success');
+    p.classList.add('text-danger');
+    inputUrl.classList.add('is-invalid');
+  }
+};
+const formEvent = (e) => {
+  e.preventDefault();
+  const data = new FormData(e.target);
+  const inputUrl = data.get('url');
+  schema.validate({ url: inputUrl }, { abortEarly: false })
+    .then(() => {
+      if (state.listRSS.includes(inputUrl)) {
+        watchedState(state, 'include', renderValid);
+        throw new Error('include');
+      }
+      watchedState(state, 'valid', renderValid);
+      state.listRSS.push(inputUrl);
+    })
+    .catch((error) => {
+      let { message } = error;
+      if (error.message === 'url must be a valid URL') {
+        message = 'invalid';
+      }
+      watchedState(state, message, renderValid);
+    });
+};
 export default function init() {
-  const state = {
-    listRSS: [],
-    isValid: 'valid',
-  };
-  const schema = yup.object().shape({
-    url: yup.string().url(),
-  });
-  const render = (path, value) => {
-    const inputUrl = document.querySelector('[name=url]');
-    if (value === 'invalid') {
-      inputUrl.classList.add('is-invalid');
-    } else {
-      const forma = document.querySelector('form');
-      inputUrl.classList.remove('is-invalid');
-      forma.reset();
-      inputUrl.focus();
-    }
-  };
-
   const forma = form();
-  forma.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const data = new FormData(e.target);
-    const inputUrl = data.get('url');
-    console.log(state);
-    schema.validate({ url: inputUrl }, { abortEarly: false })
-      .then(() => {
-        if (state.listRSS.includes(inputUrl)) {
-          throw new Error();
-        }
-        watchedState(state, 'valid', render);
-        watchedState(state, inputUrl, render);
-      })
-      .catch(() => watchedState(state, 'invalid', render));
-  });
+  forma.addEventListener('submit', formEvent);
   const element = document.body;
   const section = document.createElement('section');
   section.classList.add('container-fluid', 'bg-dark', 'p-5');
@@ -54,15 +72,14 @@ export default function init() {
   const h1 = document.createElement('h1');
   h1.classList.add('display-3', 'mb-0');
   h1.textContent = 'RSS агрегатор';
-  div1.append(h1);
   const p = document.createElement('p');
   p.classList.add('lead');
   p.textContent = 'Начните читать RSS сегодня! Это легко, это красиво.';
-  div1.append(p);
-  div1.append(forma);
   const p1 = document.createElement('p');
   p1.classList.add('mt-2', 'mb-0', 'text-muted');
   p1.textContent = 'Пример: https://ru.hexlet.io/lessons.rss';
-  div1.append(p1);
+  const p2 = document.createElement('p');
+  p2.classList.add('feedback', 'm-0', 'position-absolute', 'small', 'text-danger');
+  div1.append(h1, p, forma, p1, p2);
   element.append(body());
 }
