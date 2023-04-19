@@ -3,10 +3,13 @@ import i18n from 'i18next';
 import resources from './locales/index.js';
 import form from './form.js';
 import body from './body.js';
-import watchedState from './watcheds.js';
+import { watchedValid } from './watcheds.js';
+import request from './request.js';
 
 const state = {
   listRSS: [],
+  fids: [],
+  posts: [],
   isValid: null,
   lng: 'ru',
 };
@@ -18,12 +21,17 @@ const schema = yup.object().shape({
   url: yup.string().url(),
 });
 const renderValid = (path, value) => {
-  console.log(value);
   const inputUrl = document.querySelector('[name=url]');
+  const button = document.querySelector('[aria-label="add"]');
   const forma = document.querySelector('form');
   const p = forma.parentNode.lastChild;
+  button.disabled = false;
+  inputUrl.disabled = false;
   p.textContent = i18n.t(value);
-  if (value === 'valid') {
+  if (value === 'initialization') {
+    button.disabled = true;
+    inputUrl.disabled = true;
+  } else if (value === 'valid') {
     inputUrl.classList.remove('is-invalid');
     forma.reset();
     inputUrl.focus();
@@ -35,25 +43,35 @@ const renderValid = (path, value) => {
     inputUrl.classList.add('is-invalid');
   }
 };
+const renderRss = () => {
+
+};
+const renderFids = () => {
+
+};
+const renderPosts = () => {
+
+};
 const formEvent = (e) => {
   e.preventDefault();
+  form.readOnly = true;
   const data = new FormData(e.target);
   const inputUrl = data.get('url');
   schema.validate({ url: inputUrl }, { abortEarly: false })
     .then(() => {
       if (state.listRSS.includes(inputUrl)) {
-        watchedState(state, 'include', renderValid);
+        watchedValid(state, 'include', renderValid);
         throw new Error('include');
       }
-      watchedState(state, 'valid', renderValid);
-      state.listRSS.push(inputUrl);
+      watchedValid(state, 'initialization', renderValid);
+      return request(state, inputUrl, renderValid, renderRss, renderFids, renderPosts);
     })
     .catch((error) => {
       let { message } = error;
       if (error.message === 'url must be a valid URL') {
         message = 'invalid';
       }
-      watchedState(state, message, renderValid);
+      watchedValid(state, message, renderValid);
     });
 };
 export default function init() {

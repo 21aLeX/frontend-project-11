@@ -1,11 +1,21 @@
 import onChange from 'on-change';
 
-const watchedState = (state, value, render) => {
-  const watchedStates = onChange(state, render);
-  // if (value === 'valid' || value === 'invalid') {
-  watchedStates.isValid = value;
-  // } else {
-  //   watchedStates.listRSS.push(value);
-  // }
+const watchedValid = (state, value, render) => {
+  const watched = onChange(state, render);
+  watched.isValid = value;
 };
-export default watchedState;
+const watchedRSS = (state, value, render) => {
+  const watched = onChange(state, render);
+  watched.listRSS.push(value);
+};
+const watchedFid = (state, value, render) => {
+  const watched = onChange(state, render);
+  watched.fids.push(value);
+};
+const watchedPosts = (state, value, render) => {
+  const watched = onChange(state, render);
+  watched.posts.push(value);
+};
+export {
+  watchedValid, watchedRSS, watchedFid, watchedPosts,
+};
