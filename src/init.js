@@ -3,13 +3,14 @@ import i18n from 'i18next';
 import resources from './locales/index.js';
 import form from './form.js';
 import body from './body.js';
-import { watchedValid } from './watcheds.js';
+import watchedState from './watcheds.js';
 import request from './request.js';
+import cutObj from './cutObj.js';
 
 const state = {
   listRSS: [],
   fids: [],
-  posts: [],
+  posts: {},
   isValid: null,
   lng: 'ru',
 };
@@ -20,7 +21,7 @@ i18n.init({
 const schema = yup.object().shape({
   url: yup.string().url(),
 });
-const renderValid = (path, value) => {
+const renderValid = (value) => {
   const inputUrl = document.querySelector('[name=url]');
   const button = document.querySelector('[aria-label="add"]');
   const forma = document.querySelector('form');
@@ -43,14 +44,34 @@ const renderValid = (path, value) => {
     inputUrl.classList.add('is-invalid');
   }
 };
-const renderRss = () => {
-
+// render
+const render = (path, value) => {
+  if (path === 'isValid') {
+    renderValid(value);
+  }
+  // console.log(path);
 };
-const renderFids = () => {
-
-};
-const renderPosts = () => {
-
+const update = () => {
+  setTimeout(() => {
+    state.listRSS.forEach((url) => {
+      request(url)
+        .then((doc) => {
+          const idFid = state.listRSS.length;
+          const idPosts = state.posts.length;
+          const [, posts] = cutObj(doc, idFid, idPosts);
+          const notContained = {};
+          const keys = Object.keys(posts);
+          keys.forEach((key) => {
+            if (!state.posts[url][key]) {
+              notContained[key] = posts[key];
+            }
+          });
+          watchedState(state, [null, notContained, url, {}], render);
+        })
+        .catch(() => { });
+    });
+    update();
+  }, 5000);
 };
 const formEvent = (e) => {
   e.preventDefault();
@@ -60,20 +81,24 @@ const formEvent = (e) => {
   schema.validate({ url: inputUrl }, { abortEarly: false })
     .then(() => {
       if (state.listRSS.includes(inputUrl)) {
-        watchedValid(state, 'include', renderValid);
         throw new Error('include');
       }
-      watchedValid(state, 'initialization', renderValid);
-      return request(state, inputUrl, renderValid, renderRss, renderFids, renderPosts);
+      watchedState(state, ['initialization'], render);
+      return request(inputUrl).then((doc) => {
+        const idFid = state.listRSS.length;
+        const [fid, posts] = cutObj(doc, idFid, inputUrl);
+        watchedState(state, ['valid', posts, inputUrl, fid], render);
+      });
     })
     .catch((error) => {
       let { message } = error;
       if (error.message === 'url must be a valid URL') {
         message = 'invalid';
       }
-      watchedValid(state, message, renderValid);
+      watchedState(state, [message], render);
     });
 };
+update();
 export default function init() {
   const forma = form();
   forma.addEventListener('submit', formEvent);
