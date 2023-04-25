@@ -4,6 +4,7 @@ const cutObjPost = (items) => {
     const link = item.querySelector('link').textContent;
     const obj = {
       title: item.querySelector('title').textContent,
+      description: item.querySelector('description').textContent,
       link,
     };
     result[link] = obj;

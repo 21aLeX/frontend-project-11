@@ -6,50 +6,58 @@ import body from './body.js';
 import watchedState from './watcheds.js';
 import request from './request.js';
 import cutObj from './cutObj.js';
+import renderValid from './renders/renderValid.js';
+import renderPosts from './renders/renderPosts.js';
+import renderFids from './renders/renderFids.js';
+import renderUi from './renders/renderUi.js';
+import getModal from './modal.js';
+import renderModal from './renders/renderModal.js';
 
+// если что я пыталась сократить количество кода в функциях(до 25 строк)
+//  чтоб значек кодклимейта был зелененький
 const state = {
   listRSS: [],
   fids: [],
   posts: {},
   isValid: null,
   lng: 'ru',
+  stateUi: [],
+  modal: false,
 };
 i18n.init({
   lng: state.lng,
   resources,
 });
-const schema = yup.object().shape({
-  url: yup.string().url(),
+yup.setLocale({
+  mixed: {
+    required: { valid: 'required' },
+  },
+  string: {
+    url: { valid: 'invalid' },
+  },
 });
-const renderValid = (value) => {
-  const inputUrl = document.querySelector('[name=url]');
-  const button = document.querySelector('[aria-label="add"]');
-  const forma = document.querySelector('form');
-  const p = forma.parentNode.lastChild;
-  button.disabled = false;
-  inputUrl.disabled = false;
-  p.textContent = i18n.t(value);
-  if (value === 'initialization') {
-    button.disabled = true;
-    inputUrl.disabled = true;
-  } else if (value === 'valid') {
-    inputUrl.classList.remove('is-invalid');
-    forma.reset();
-    inputUrl.focus();
-    p.classList.remove('text-danger');
-    p.classList.add('text-success');
-  } else {
-    p.classList.remove('text-success');
-    p.classList.add('text-danger');
-    inputUrl.classList.add('is-invalid');
-  }
-};
+const schema = yup.object().shape({
+  url: yup.string().required().url(),
+});
 // render
+// рендеры разнесла по разным файлам по тойже причине и для читаемости
 const render = (path, value) => {
-  if (path === 'isValid') {
-    renderValid(value);
+  switch (path) {
+    case ('isValid'):
+      renderValid(value, i18n);
+      break;
+    case ('fids'):
+      renderFids(value, i18n);
+      break;
+    case ('stateUi'):
+      renderUi(value);
+      break;
+    case ('modal'):
+      renderModal(value, i18n);
+      break;
+    default:
+      renderPosts(value, i18n, state, render);
   }
-  // console.log(path);
 };
 const update = () => {
   setTimeout(() => {
@@ -66,7 +74,8 @@ const update = () => {
               notContained[key] = posts[key];
             }
           });
-          watchedState(state, [null, notContained, url, {}], render);
+          state.posts[url] = { ...(state.posts[url] ?? {}), ...notContained };
+          watchedState(state, { posts: state.posts, url }, render);
         })
         .catch(() => { });
     });
@@ -75,7 +84,6 @@ const update = () => {
 };
 const formEvent = (e) => {
   e.preventDefault();
-  form.readOnly = true;
   const data = new FormData(e.target);
   const inputUrl = data.get('url');
   schema.validate({ url: inputUrl }, { abortEarly: false })
@@ -83,35 +91,23 @@ const formEvent = (e) => {
       if (state.listRSS.includes(inputUrl)) {
         throw new Error('include');
       }
-      watchedState(state, ['initialization'], render);
+      watchedState(state, { valid: 'initialization' }, render);
       return request(inputUrl).then((doc) => {
         const idFid = state.listRSS.length;
         const [fid, posts] = cutObj(doc, idFid, inputUrl);
-        watchedState(state, ['valid', posts, inputUrl, fid], render);
+        state.fids.push(fid);
+        state.posts[inputUrl] = { ...(state.posts[inputUrl] ?? {}), ...posts };
+        watchedState(state, {
+          valid: 'valid', posts: state.posts, url: inputUrl, fid: state.fids,
+        }, render);
       });
     })
     .catch((error) => {
-      let { message } = error;
-      if (error.message === 'url must be a valid URL') {
-        message = 'invalid';
-      }
-      watchedState(state, [message], render);
+      const objParam = error.errors ? error.errors[0] : { valid: error.message };
+      watchedState(state, objParam, render);
     });
 };
-update();
-export default function init() {
-  const forma = form();
-  forma.addEventListener('submit', formEvent);
-  const element = document.body;
-  const section = document.createElement('section');
-  section.classList.add('container-fluid', 'bg-dark', 'p-5');
-  element.append(section);
-  const div = document.createElement('div');
-  div.classList.add('row');
-  section.append(div);
-  const div1 = document.createElement('div');
-  div1.classList.add('col-md-10', 'col-lg-8', 'mx-auto', 'text-white');
-  div.append(div1);
+const getHeader = () => {
   const h1 = document.createElement('h1');
   h1.classList.add('display-3', 'mb-0');
   h1.textContent = 'RSS агрегатор';
@@ -123,6 +119,24 @@ export default function init() {
   p1.textContent = 'Пример: https://ru.hexlet.io/lessons.rss';
   const p2 = document.createElement('p');
   p2.classList.add('feedback', 'm-0', 'position-absolute', 'small', 'text-danger');
+  return [h1, p, p1, p2];
+};
+update();
+export default function init() {
+  const forma = form();
+  forma.addEventListener('submit', formEvent);
+  const element = document.body;
+  element.insertAdjacentHTML('afterbegin', getModal());
+  const section = document.createElement('section');
+  section.classList.add('container-fluid', 'bg-dark', 'p-5');
+  element.append(section);
+  const div = document.createElement('div');
+  div.classList.add('row');
+  section.append(div);
+  const div1 = document.createElement('div');
+  div1.classList.add('col-md-10', 'col-lg-8', 'mx-auto', 'text-white');
+  div.append(div1);
+  const [h1, p, p1, p2] = getHeader();
   div1.append(h1, p, forma, p1, p2);
   element.append(body());
 }

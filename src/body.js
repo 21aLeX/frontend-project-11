@@ -1,7 +1,6 @@
 export default () => {
   const section = document.createElement('section');
   section.classList.add('container-fluid', 'container-xxl', 'p-5');
-
   const div = document.createElement('div');
   div.classList.add('row');
   section.append(div);
