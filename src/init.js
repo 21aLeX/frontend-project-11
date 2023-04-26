@@ -143,10 +143,10 @@ export default function init() {
     lng: state.lng,
     resources,
   }).catch(() => { });// обработать как промис, это так?
-  const render = createRender(state);
-  const watched = watchedState(state, render);
+  const view = createRender(state);
+  const watched = watchedState(state, view);
   const forma = form(i18n);
-  forma.addEventListener('submit', formEvent([state, watched, render]));
+  forma.addEventListener('submit', formEvent([state, watched, view]));
   const element = document.body;
   element.insertAdjacentHTML('afterbegin', getModal());
   const section = document.createElement('section');
