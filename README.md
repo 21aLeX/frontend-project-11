@@ -6,3 +6,16 @@
 
 [**Vercel**](https://frontend-project-11-r4u1.vercel.app/)
 
+Системные требования:
+
+OS: linux or wls
+
+node: v18.12.1
+
+Для установки всех необходимых проектов запустить:
+
+make install
+
+Для запуска локально:
+
+make develop

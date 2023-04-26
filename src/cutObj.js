@@ -1,4 +1,4 @@
-const cutObjPost = (items) => {
+const createObjPost = (items) => {
   const result = {};
   items.forEach((item) => {
     const link = item.querySelector('link').textContent;
@@ -12,7 +12,7 @@ const cutObjPost = (items) => {
   return result;
 };
 export default (doc, id) => {
-  const posts = cutObjPost(doc.querySelectorAll('item'));
+  const posts = createObjPost(doc.querySelectorAll('item'));
   const objFid = {
     id,
     title: doc.querySelector('title').textContent,

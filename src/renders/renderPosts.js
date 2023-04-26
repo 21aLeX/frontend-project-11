@@ -1,5 +1,3 @@
-import watchedState from '../watcheds.js';
-
 const createA = (id, href, title) => {
   const a = document.createElement('a');
   a.setAttribute('href', href);
@@ -18,33 +16,24 @@ const createButton = (id) => {
   button.classList.add('btn', 'btn-outline-primary', 'btn-sm');
   return button;
 };
-const createLi = (container, posts, i18n, state, render) => {
-  let dataId = 1;
-  posts.forEach((post) => {
+const createLi = (container, posts, i18n, states) => {
+  const state = states;// чтоб линтер не ругачся почему этоя меняю параметр
+  posts.forEach((post, index) => {
     const li = document.createElement('li');
     li.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-start', 'border-0', 'border-end-0');
-    const a = createA(dataId, post.link, post.title);
-    if (state.stateUi.includes(post.link)) {
+    const a = createA(index, post.link, post.title);
+    if (state.stateUi.includes(index)) {
       a.classList.add('fw-normal', 'link-secondary');
     } else {
       a.classList.add('fw-bold');
     }
-    a.addEventListener('click', () => {
-      watchedState(state, { idClick: post.link }, render);
-    });
-    const button = createButton(dataId, post.link, post.title);
+    const button = createButton(index, post.link, post.title);
     li.append(a, button);
     button.textContent = i18n.t('view');
-    button.addEventListener('click', () => {
-      watchedState(state, {
-        idClick: post.link, modal: [post.title, post.description, post.link],
-      }, render);
-    });
-    dataId += 1;
     container.append(li);
   });
 };
-const renderPosts = (value, i18n, state, render) => {
+const renderPosts = (value, i18n, state) => {
   const container = document.querySelector('.posts');
   const div1 = document.createElement('div');
   container.replaceChildren(div1);
@@ -59,6 +48,6 @@ const renderPosts = (value, i18n, state, render) => {
   div1.append(div2, ul);
   ul.classList.add('list-group', 'border-0', 'rounded-0-group');
   const posts = Object.values(value).map((item) => Object.values(item)).flat();
-  createLi(ul, posts, i18n, state, render);
+  createLi(ul, posts, i18n, state);
 };
 export default renderPosts;
