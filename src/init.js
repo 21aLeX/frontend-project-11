@@ -6,21 +6,18 @@ import body from './renders/body.js';
 import watchedState from './watcheds.js';
 import request from './request.js';
 import cutObj from './cutObj.js';
-import renderValid from './renders/renderValid.js';
-import renderPosts from './renders/renderPosts.js';
-import renderFids from './renders/renderFids.js';
-import renderUi from './renders/renderUi.js';
 import getModal from './modal.js';
-import renderModal from './renders/renderModal.js';
+import createRender from './createRender.js';
+import getSection from './renders/getSection.js';
 
 const createState = () => ({
   listRSS: [],
   fids: [],
-  posts: {},
-  isValid: null,
+  posts: new Map(),
+  form: { status: null },
   lng: 'ru',
   stateUi: [],
-  modal: false,
+  modal: {},
 });
 yup.setLocale({
   mixed: {
@@ -33,133 +30,77 @@ yup.setLocale({
 const schema = yup.object().shape({
   url: yup.string().required().url(),
 });
-const createRender = (state) => {
-  const render = (path, value) => {
-    switch (path) {
-      case ('isValid'):
-        renderValid(value, i18n);
-        break;
-      case ('fids'):
-        renderFids(value, i18n);
-        break;
-      case ('stateUi'):
-        console.log(value);
-        renderUi(value);
-        break;
-      case ('modal'):
-        renderModal(value, i18n);
-        break;
-      case ('listRSS'):
-        break;
-      default:
-        renderPosts(value, i18n, state);
+
+const addEventLink = (state, watched) => {
+  const postsAll = [];
+  state.posts.forEach((post) => {
+    postsAll.push(...post);
+  });
+  const container = document.querySelector('.posts');
+  container.addEventListener('click', (e) => {
+    const tag = e.target;
+    if (tag.tagName === 'A' || tag.tagName === 'BUTTON') {
+      watched.stateUi.push(Number(tag.dataset.id));
+    } if (tag.tagName === 'BUTTON') {
+      const { title, description, link } = postsAll[tag.dataset.id];
+      // eslint-disable-next-line no-param-reassign
+      watched.modal = { title, description, link };
     }
-  };
-  return render;
-};
-const addEventLink = (stateANDwatched) => {
-  const [state, watched] = stateANDwatched;
-  const posts = Object.values(state.posts).map((item) => Object.values(item)).flat();
-  posts.forEach((post, index) => {
-    const [a, button] = document.querySelectorAll(`[data-id="${index}"]`);
-    a.addEventListener('click', () => {
-      if (!state.stateUi.includes(index)) {
-        watched.stateUi = [...state.stateUi, index];
-      }
-    });
-    button.addEventListener('click', () => {
-      if (!state.stateUi.includes(index)) {
-        watched.stateUi = [...state.stateUi, index];
-      }
-      watched.modal = [post.title, post.description, post.link];
-    });
   });
 };
-const update = (stateANDwatcheds) => {
-  const [state, watched] = stateANDwatcheds;// чтоб линтер не ругался
+const update = (state, watched) => {
   setTimeout(() => {
-    state.listRSS.forEach((url) => {
-      request(url).then((doc) => {
-        const idFid = state.listRSS.length;
-        const idPosts = state.posts.length;
-        const [, posts] = cutObj(doc, idFid, idPosts);
-        const notContained = {};
-        const keys = Object.keys(posts);
-        keys.forEach((key) => {
-          if (!state.posts[url][key]) {
-            notContained[key] = posts[key];
-          }
-        });
-        state.posts[url] = { ...(state.posts[url] ?? {}), ...notContained };// это нормально?
-        watched.posts = { ...state.posts };
-        addEventLink([state, watched]);
-        watched.url.push(url);
-      }).catch(() => { });
-    });
-    update([state, watched]);
+    if (state.listRSS.length > 0) {
+      const newPosts = [];
+      state.listRSS.forEach((url, index) => {
+        request(url).then((doc) => {
+          const [, posts] = cutObj(doc, index);
+          newPosts.push(posts);
+          watched.posts.set(index, posts);
+        }).catch(() => { });
+      });
+    }
+    update(state, watched);
   }, 5000);
 };
-const formEvent = (stateANDwatcheds) => (e) => {
+const formEvent = (state, watched) => (e) => {
   e.preventDefault();
-  const [state, watched] = stateANDwatcheds;// аналогично
   const data = new FormData(e.target);
   const inputUrl = data.get('url');
   schema.validate({ url: inputUrl }, { abortEarly: false }).then(() => {
     if (state.listRSS.includes(inputUrl)) {
       throw new Error('include');
     }
-    watched.isValid = 'initialization';
-    return request(inputUrl).then((doc) => {
+    // eslint-disable-next-line no-param-reassign
+    watched.form.status = 'initialization';
+    return request(inputUrl).then((doc) => { // без return ошибки не доходят до следующего cath
       const idFid = state.listRSS.length;
-      const [fid, posts] = cutObj(doc, idFid, inputUrl);
-      state.posts[inputUrl] = { ...posts };// это нормально?
-      watched.posts = { ...state.posts };
+      const [fid, posts] = cutObj(doc, idFid);
+      watched.posts.set(idFid, posts);
       watched.fids.push(fid);
-      watched.isValid = 'valid';
+      // eslint-disable-next-line no-param-reassign
+      watched.form.status = 'valid';
       watched.listRSS.push(inputUrl);
-      addEventLink([state, watched]);
+      addEventLink(state, watched);
     });
   }).catch((error) => {
-    watched.isValid = error.errors ? error.errors[0] : error.message;
+    // eslint-disable-next-line no-param-reassign
+    watched.form.status = error.errors ? error.errors[0] : error.message;
   });
-};
-const getHeader = () => {
-  const h1 = document.createElement('h1');
-  h1.classList.add('display-3', 'mb-0');
-  h1.textContent = i18n.t('interface.rssAggregator');
-  const p = document.createElement('p');
-  p.classList.add('lead');
-  p.textContent = i18n.t('interface.start');
-  const p1 = document.createElement('p');
-  p1.classList.add('mt-2', 'mb-0', 'text-muted');
-  p1.textContent = i18n.t('interface.example');
-  const p2 = document.createElement('p');
-  p2.classList.add('feedback', 'm-0', 'position-absolute', 'small', 'text-danger');
-  return [h1, p, p1, p2];
 };
 export default function init() {
   const state = createState();
   i18n.init({
     lng: state.lng,
     resources,
-  }).catch(() => { });// обработать как промис, это так?
+  }).then().catch(() => { });// так?
   const view = createRender(state);
   const watched = watchedState(state, view);
+  update(state, watched);
   const forma = form(i18n);
-  forma.addEventListener('submit', formEvent([state, watched, view]));
+  forma.addEventListener('submit', formEvent(state, watched));
   const element = document.body;
   element.insertAdjacentHTML('afterbegin', getModal());
-  const section = document.createElement('section');
-  section.classList.add('container-fluid', 'bg-dark', 'p-5');
-  element.append(section);
-  const div = document.createElement('div');
-  div.classList.add('row');
-  section.append(div);
-  const div1 = document.createElement('div');
-  div1.classList.add('col-md-10', 'col-lg-8', 'mx-auto', 'text-white');
-  div.append(div1);
-  const [h1, p, p1, p2] = getHeader();
-  div1.append(h1, p, forma, p1, p2);
+  element.append(getSection(forma, i18n));
   element.append(body());
-  update([state, watched]);
 }

@@ -16,9 +16,12 @@ const createButton = (id) => {
   button.classList.add('btn', 'btn-outline-primary', 'btn-sm');
   return button;
 };
-const createLi = (container, posts, i18n, states) => {
-  const state = states;// чтоб линтер не ругачся почему этоя меняю параметр
-  posts.forEach((post, index) => {
+const createLi = (container, posts, i18n, state) => {
+  const postsAll = [];
+  posts.forEach((post) => {
+    postsAll.push(...post);
+  });
+  postsAll.forEach((post, index) => {
     const li = document.createElement('li');
     li.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-start', 'border-0', 'border-end-0');
     const a = createA(index, post.link, post.title);
@@ -47,7 +50,6 @@ const renderPosts = (value, i18n, state) => {
   const ul = document.createElement('ul');
   div1.append(div2, ul);
   ul.classList.add('list-group', 'border-0', 'rounded-0-group');
-  const posts = Object.values(value).map((item) => Object.values(item)).flat();
-  createLi(ul, posts, i18n, state);
+  createLi(ul, value, i18n, state);
 };
 export default renderPosts;
