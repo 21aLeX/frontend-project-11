@@ -17,7 +17,7 @@ const getButton = (i18n) => {
   button.textContent = i18n.t('interface.add');
   return button;
 };
-export default (i18n) => { // видимо слова "создайте страницу..." я восприняла буквально)
+export default (i18n) => {
   const form = document.createElement('form');
   form.classList.add('rss-form', 'text-body');
   form.setAttribute('formaction', 'true');

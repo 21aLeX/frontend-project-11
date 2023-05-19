@@ -1,4 +1,4 @@
-const getModal = () => `<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModal" aria-hidden="true">
+const getModal = (i18n) => `<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModal" aria-hidden="true">
 <div class="modal-dialog">
   <div class="modal-content">
     <div class="modal-header">
@@ -8,8 +8,8 @@ const getModal = () => `<div class="modal fade" id="exampleModal" tabindex="-1" 
     <div class="modal-body">      
     </div>
     <div class="modal-footer">
-      <a class="btn btn-primary full-article" role="button" target="_blank" rel="noopener noreferrer"></a>
-      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"></button>
+      <a class="btn btn-primary full-article" role="button" target="_blank" rel="noopener noreferrer">${i18n.t('modalRead')}</a>
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">${i18n.t('modalClose')}</button>
     </div>
   </div>
 </div>

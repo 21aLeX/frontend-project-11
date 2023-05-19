@@ -17,11 +17,7 @@ const createButton = (id) => {
   return button;
 };
 const createLi = (container, posts, i18n, state) => {
-  const postsAll = [];
-  posts.forEach((post) => {
-    postsAll.push(...post);
-  });
-  postsAll.forEach((post, index) => {
+  posts.get('posts').forEach((post, index) => {
     const li = document.createElement('li');
     li.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-start', 'border-0', 'border-end-0');
     const a = createA(index, post.link, post.title);
